@@ -60,13 +60,31 @@ export default function ParentDashboard() {
 	}, {});
 	const mostActiveSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
+	// Calculate folders and tags from notes
+	const folders = Array.from(
+		notes.reduce((m, n) => {
+			const key = n.folder || 'All Notes';
+			m.set(key, (m.get(key) || 0) + 1);
+			return m;
+		}, new Map<string, number>())
+	).map(([name, count]) => ({ name, count }));
+
+	const tags = Array.from(
+		notes.reduce((s, n) => {
+			(n.tags || []).forEach((t: string) => s.add(t));
+			return s;
+		}, new Set<string>())
+	);
+
 	if (loading) return <Loader />;
 
 	return (
 		<DashboardLayout
 			role={role}
 			userName={userName}
-			// folders/tags if you want to show them
+			folders={folders}
+			tags={tags}
+			// No onNewNote prop for parent
 		>
 			<div className="space-y-6">
 				{/* Header */}
