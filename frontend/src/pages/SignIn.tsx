@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { User, Users, Eye, EyeOff } from 'lucide-react';
 
+const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+
 export default function SignIn() {
   const [role, setRole] = useState<'child' | 'parent' | null>(null);
   const [email, setEmail] = useState('');
@@ -24,7 +26,7 @@ export default function SignIn() {
         return;
       }
 
-      const res = await fetch('http://127.0.0.1:8000/login', {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+
 export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
@@ -17,7 +19,7 @@ export default function ParentDashboard() {
 	useEffect(() => {
 		if (childId) {
 			console.log('Fetching notes for child ID:', childId);
-			fetch(`http://127.0.0.1:8000/notes/?owner_id=${childId}`)
+			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`)
 				.then((res) => res.json())
 				.then((data) => {
 					console.log('Fetched notes:', data);

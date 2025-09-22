@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Grid, List, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+
 export default function ChildDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [notes, setNotes] = useState([]);
@@ -23,7 +25,7 @@ export default function ChildDashboard() {
   // Fetch notes from backend
   useEffect(() => {
     if (userId) {
-      fetch(`http://127.0.0.1:8000/notes/?owner_id=${userId}`)
+      fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`)
         .then(res => res.json())
         .then(setNotes)
         .catch(() => setNotes([]));
@@ -33,7 +35,7 @@ export default function ChildDashboard() {
   const fetchNotes = async () => {
     try {
       console.log('Fetching notes...');
-      const response = await fetch('http://127.0.0.1:8000/notes/?owner_id=1');
+      const response = await fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`);
       console.log('Response status:', response.status);
       
       if (response.ok) {
@@ -62,7 +64,7 @@ export default function ChildDashboard() {
     try {
       if (editingNote) {
         // Update existing note
-        const response = await fetch(`http://127.0.0.1:8000/notes/${editingNote.id}`, {
+        const response = await fetch(`${API_BASE_URL}/notes/${editingNote.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -79,7 +81,7 @@ export default function ChildDashboard() {
         }
       } else {
         // Create new note
-        const response = await fetch('http://127.0.0.1:8000/notes/', {
+        const response = await fetch(`${API_BASE_URL}/notes/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -118,7 +120,7 @@ export default function ChildDashboard() {
     if (!window.confirm('Are you sure you want to delete this note?')) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/notes/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'DELETE',
       });
 
