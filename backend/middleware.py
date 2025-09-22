@@ -16,4 +16,3 @@ def add_cors(app):
         allow_headers=["*"],
     )
 
-add_cors(app)
