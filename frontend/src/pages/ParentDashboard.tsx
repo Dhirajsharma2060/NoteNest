@@ -2,7 +2,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { NoteCard } from '@/components/NoteCard';
 import { Button } from '@/components/ui/button';
 import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Loader from '@/components/Loader';
 
 const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
@@ -11,6 +11,7 @@ export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const pollingRef = useRef<NodeJS.Timeout | null>(null);
 	
 	const user = JSON.parse(localStorage.getItem('parent_user') || '{}');
 	const userName = user.name || 'Parent';
@@ -18,7 +19,7 @@ export default function ParentDashboard() {
 	const childId = user.child_id;
 	const childName = user.child_name || 'Your Child';
 
-	useEffect(() => {
+	const fetchNotes = () => {
 		if (childId) {
 			setLoading(true);
 			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`)
@@ -26,9 +27,19 @@ export default function ParentDashboard() {
 				.then((data) => setNotes(data))
 				.catch(() => setNotes([]))
 				.finally(() => setLoading(false));
-		} else {
-			setLoading(false);
 		}
+	};
+
+	useEffect(() => {
+		fetchNotes(); // Initial fetch
+
+		// Set up polling every 60 seconds
+		pollingRef.current = setInterval(fetchNotes, 60000);
+
+		// Cleanup on unmount
+		return () => {
+			if (pollingRef.current) clearInterval(pollingRef.current);
+		};
 	}, [childId]);
 
 	// Dynamic stats
