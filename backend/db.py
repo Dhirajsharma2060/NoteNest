@@ -1,9 +1,21 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
-DATABASE_URL = "sqlite:///./note_nest_dev.db"
+load_dotenv()
 
-engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+    )
+    # Try connecting to the database to verify connection
+    with engine.connect() as connection:
+        print("Database connection successful!")
+except Exception as e:
+    print(f"Database connection failed: {e}")
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
