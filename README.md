@@ -30,7 +30,14 @@ A playful, family-friendly note-taking app for children and parents.
 
 ## 📸 Screenshots
 
-> _Add screenshots here to showcase the child dashboard, parent dashboard, and note creation UI._
+### Child Dashboard
+![Child Dashboard](frontend/public/screenshots/Screenshot from 2025-09-22 18-03-06.png)
+
+### Parent Dashboard
+![Parent Dashboard](frontend/public/screenshots/Screenshot from 2025-09-22 18-03-32.png)
+
+### Note Creation UI
+![Note Creation](frontend/public/screenshots/Screenshot from 2025-09-22 18-04-14.png)
 
 ---
 
@@ -135,4 +142,3 @@ Open an issue or start a discussion on [GitHub](https://github.com/yourusername/
 ---
 
 **Let your family's ideas take flight with NoteNest!**
-# NoteNest
