@@ -30,3 +30,4 @@ uvloop
 watchfiles
 websockets
 psycopg2-binary
+bcrypt
