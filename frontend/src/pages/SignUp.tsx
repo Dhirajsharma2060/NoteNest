@@ -3,11 +3,12 @@ import { AuthLayout } from '@/components/AuthLayout';
 import { RoleSelector } from '@/components/RoleSelector';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 
 export default function SignUp() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'role' | 'details'>('role');
   const [role, setRole] = useState<'child' | 'parent' | null>(null);
   const [name, setName] = useState('');
@@ -49,8 +50,8 @@ export default function SignUp() {
         alert(`Signup successful! Share this family code with your parent: ${data.family_code}`);
       }
 
-      // Redirect to appropriate dashboard
-      window.location.href = role === 'child' ? '/child' : '/parent';
+      // Use React Router navigation instead of window.location.href
+      navigate(role === 'child' ? '/child' : '/parent');
     } catch (err: any) {
       setError(err.message);
     } finally {

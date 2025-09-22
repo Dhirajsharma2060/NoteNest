@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { AuthLayout } from '@/components/AuthLayout';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User, Users, Eye, EyeOff } from 'lucide-react';
 
 const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 
 export default function SignIn() {
+  const navigate = useNavigate();
   const [role, setRole] = useState<'child' | 'parent' | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,12 +42,10 @@ export default function SignIn() {
       }
 
       // Store tokens under role-specific keys
-      localStorage.setItem(`${role}_access_token`, data.access_token);
-      localStorage.setItem(`${role}_refresh_token`, data.refresh_token);
       localStorage.setItem(`${role}_user`, JSON.stringify(data.user));
 
-      // Redirect based on role
-      window.location.href = role === 'child' ? '/child' : '/parent';
+      // Use React Router navigation
+      navigate(role === 'child' ? '/child' : '/parent');
     } catch (err: any) {
       setError(err.message);
     } finally {

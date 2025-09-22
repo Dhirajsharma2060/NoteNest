@@ -24,7 +24,6 @@ const App = () => (
           <Route path="/signup" element={<SignUp />} />
           <Route path="/child" element={<ChildDashboard />} />
           <Route path="/parent" element={<ParentDashboard />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
