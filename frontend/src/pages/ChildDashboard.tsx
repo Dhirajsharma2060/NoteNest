@@ -3,6 +3,7 @@ import { NoteCard } from '@/components/NoteCard';
 import { Button } from '@/components/ui/button';
 import { Grid, List, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import Loader from '@/components/Loader';
 
 const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 
@@ -18,6 +19,7 @@ export default function ChildDashboard() {
     folder: '',
     is_checklist: false,
   });
+  const [loading, setLoading] = useState(true);
 
   const user = JSON.parse(localStorage.getItem('child_user') || '{}');
   const userId = user.id;
@@ -25,10 +27,14 @@ export default function ChildDashboard() {
   // Fetch notes from backend
   useEffect(() => {
     if (userId) {
+      setLoading(true);
       fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`)
         .then(res => res.json())
         .then(setNotes)
-        .catch(() => setNotes([]));
+        .catch(() => setNotes([]))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [userId]);
 
@@ -164,6 +170,8 @@ export default function ChildDashboard() {
       return s;
     }, new Set<string>())
   );
+
+  if (loading) return <Loader />;
 
   return (
     <DashboardLayout

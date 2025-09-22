@@ -3,12 +3,14 @@ import { NoteCard } from '@/components/NoteCard';
 import { Button } from '@/components/ui/button';
 import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import Loader from '@/components/Loader';
 
 const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 
 export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
+	const [loading, setLoading] = useState(true);
 	
 	const user = JSON.parse(localStorage.getItem('parent_user') || '{}');
 	const userName = user.name || 'Parent';
@@ -18,17 +20,14 @@ export default function ParentDashboard() {
 
 	useEffect(() => {
 		if (childId) {
-			console.log('Fetching notes for child ID:', childId);
+			setLoading(true);
 			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`)
 				.then((res) => res.json())
-				.then((data) => {
-					console.log('Fetched notes:', data);
-					setNotes(data);
-				})
-				.catch((err) => {
-					console.error('Error fetching notes:', err);
-					setNotes([]);
-				});
+				.then((data) => setNotes(data))
+				.catch(() => setNotes([]))
+				.finally(() => setLoading(false));
+		} else {
+			setLoading(false);
 		}
 	}, [childId]);
 
@@ -49,6 +48,8 @@ export default function ParentDashboard() {
 		return acc;
 	}, {});
 	const mostActiveSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+	if (loading) return <Loader />;
 
 	return (
 		<DashboardLayout
