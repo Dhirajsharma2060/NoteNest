@@ -31,13 +31,13 @@ A playful, family-friendly note-taking app for children and parents.
 ## 📸 Screenshots
 
 ### Child Dashboard
-![Child Dashboard](screenshots/Screenshot from 2025-09-22 18-03-06.png)
+![Child Dashboard](screenshots/child-dashboard.png)
 
 ### Parent Dashboard
-![Parent Dashboard](screenshots/Screenshot from 2025-09-22 18-03-32.png)
+![Parent Dashboard](screenshots/parent-dashboard.png)
 
 ### Note Creation UI
-![Note Creation](screenshots/Screenshot from 2025-09-22 18-04-14.png)
+![Note Creation](screenshots/note-creation.png)
 
 ---
 
