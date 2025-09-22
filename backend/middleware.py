@@ -9,7 +9,7 @@ def add_cors(app: FastAPI):
         allow_origins=[
             "http://localhost:8080",
             "http://127.0.0.1:8080",
-            "https://notenest-b1zz.onrender.com"  # <-- No trailing slash!
+            "https://notenest-b1zz.onrender.com",  # <-- No trailing slash!
         ],
         allow_credentials=True,
         allow_methods=["*"],
