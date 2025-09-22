@@ -100,9 +100,6 @@ note-nest-family-notes/
   - Sign up using their child's family code.
   - Can view (but not edit) their child's notes and progress.
 
-- **No JWTs or refresh tokens:**  
-  - Simple, secure session management using email and password.
-
 ---
 
 ## 🗃️ Database Schema
