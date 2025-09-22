@@ -1,0 +1,37 @@
+**Objective:**
+
+Develop a note-taking web application tailored for children and their parents, emphasizing role-based access, organization, and easy note management.
+
+**Requirements:**
+
+- Implement user authentication (signin/signup) with two roles:
+    
+    ☐ **Children:** Can create, edit, and organize notes into folders.
+    
+    ☐ **Parents:** Can log in to view their children's notes but cannot modify them.
+    
+- Design an efficient database schema using any preferred database technology (SQL or NoSQL).
+
+**Technical Stack** (use below technologies preferably)**:**
+
+- **Backend:** FastAPI
+- **Frontend:** React.js
+- **Database:** Any (SQL or NoSQL)
+
+**Deliverables:**
+
+- A GitHub repository containing clean, well-documented source code.
+- A short screen recording demonstrating the app’s core functionalities: authentication, note creation and organization, role-based access, and note viewing.
+
+**Evaluation Focus:**
+
+- Backend API design and implementation using FastAPI.
+- Frontend UI development with React.
+- Database schema design and integration.
+- Proper implementation of authentication and authorization roles.
+- Functionality showcased in the screen recording.
+
+**Bonus features:**
+
+- Notes should support adding tags for categorization.
+- Include support for checkbox-style notes suitable for to-do lists.
