@@ -5,7 +5,7 @@ import { Grid, List, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Loader from '@/components/Loader';
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 
 export default function ChildDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
