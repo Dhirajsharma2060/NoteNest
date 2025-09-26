@@ -10,7 +10,7 @@ const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 export default function SignUp() {
   const navigate = useNavigate();
   const [step, setStep] = useState<'role' | 'details'>('role');
-  const [role, setRole] = useState<'child' | 'parent' | null>(null);
+  const [role, setRole] = useState<'child' | 'parent' | null>(null); 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
