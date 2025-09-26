@@ -1,4 +1,3 @@
-bcrypt
 annotated-types
 anyio
 click
@@ -11,7 +10,8 @@ h11
 httptools
 idna
 multipart
-passlib
+bcrypt==4.0.1
+passlib[bcrypt]==1.7.4
 pyasn1
 pydantic
 pydantic_core
