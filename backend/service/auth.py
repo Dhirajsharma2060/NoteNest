@@ -4,7 +4,12 @@ from passlib.context import CryptContext
 from datetime import datetime
 import secrets
 import string
+import warnings
+from passlib.exc import PasslibHashWarning
 from backend.model import Child, Parent
+
+# Suppress bcrypt password length warnings
+warnings.filterwarnings("ignore", category=PasslibHashWarning)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
