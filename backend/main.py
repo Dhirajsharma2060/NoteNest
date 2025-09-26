@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from typing import List
-from fastapi.security import OAuth2PasswordBearer
+from typing import List, Optional
 
 from .db import SessionLocal, engine
 from .model import Base, Note
@@ -39,20 +38,65 @@ def get_db():
     finally:
         db.close()
 
-# Add OAuth2 scheme for JWT token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+def get_current_user_from_header(user_id: Optional[int] = Header(None, alias="X-User-ID"), 
+                                 role: Optional[str] = Header(None, alias="X-User-Role"),
+                                 db: Session = Depends(get_db)):
+    """Get current user from headers (simple auth)"""
+    if not user_id or not role:
+        raise HTTPException(status_code=401, detail="User ID and role headers required")
+    
+    # Verify user exists in database
+    from .model import Child, Parent
+    if role == "child":
+        user = db.query(Child).filter(Child.id == user_id).first()
+    elif role == "parent":
+        user = db.query(Parent).filter(Parent.id == user_id).first()
+    else:
+        raise HTTPException(status_code=401, detail="Invalid role")
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return {"user": user, "role": role}
+
+def require_child(current_user = Depends(get_current_user_from_header)):
+    """Require child role"""
+    if current_user["role"] != "child":
+        raise HTTPException(status_code=403, detail="Child access required")
+    return current_user
+
+def require_parent(current_user = Depends(get_current_user_from_header)):
+    """Require parent role"""
+    if current_user["role"] != "parent":
+        raise HTTPException(status_code=403, detail="Parent access required")
+    return current_user
+
+def require_child_or_parent(current_user = Depends(get_current_user_from_header)):
+    """Allow both child and parent roles"""
+    if current_user["role"] not in ["child", "parent"]:
+        raise HTTPException(status_code=403, detail="Child or parent access required")
+    return current_user
+
+
+
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to NoteNest"}
 
+# Only children can create notes
 @app.post("/notes/", response_model=NoteSchema)
-def api_create_note(note: NoteSchema, db: Session = Depends(get_db)):
+def api_create_note(note: NoteSchema, db: Session = Depends(get_db), current_user = Depends(require_child)):
+    # Ensure the note is created for the authenticated child
+    if note.owner_id != current_user["user"].id:
+        raise HTTPException(status_code=403, detail="Can only create notes for yourself")
+    
     db_note = create_note(
         db=db,
         title=note.title,
         content=note.content,
-        owner_id=note.owner_id,
+        owner_id=current_user["user"].id,  # Use authenticated user's ID
         folder=note.folder,
         tags=note.tags,
         is_checklist=note.is_checklist,
@@ -69,6 +113,36 @@ def api_create_note(note: NoteSchema, db: Session = Depends(get_db)):
             ChecklistItemSchema.model_validate(item) for item in db_note.checklist_items
         ],
     )
+
+# Both children and parents can view notes (with restrictions)
+@app.get("/notes/", response_model=List[NoteSchema])
+def api_list_notes(owner_id: int, db: Session = Depends(get_db), current_user = Depends(require_child_or_parent)):
+    if current_user["role"] == "child":
+        # Children can only view their own notes
+        if owner_id != current_user["user"].id:
+            raise HTTPException(status_code=403, detail="Can only view your own notes")
+    elif current_user["role"] == "parent":
+        # Parents can only view their child's notes
+        if owner_id != current_user["user"].child_id:
+            raise HTTPException(status_code=403, detail="Can only view your child's notes")
+    
+    notes = list_notes_by_owner(db, owner_id)
+    return [
+        NoteSchema(
+            id=n.id,
+            title=n.title,
+            content=n.content,
+            owner_id=n.owner_id,
+            folder=n.folder,
+            tags=n.tags.split(",") if n.tags else [],
+            is_checklist=n.is_checklist,
+            checklist_items=[
+                ChecklistItemSchema.model_validate(item) for item in n.checklist_items
+            ],
+        )
+        for n in notes
+    ]
+
 @app.get("/notes/all", response_model=List[NoteSchema])
 def api_get_all_notes(db: Session = Depends(get_db)):
     notes = db.query(Note).order_by(Note.created_at.desc()).all()
@@ -88,26 +162,6 @@ def api_get_all_notes(db: Session = Depends(get_db)):
         for n in notes
     ]
 
-@app.get("/notes/", response_model=List[NoteSchema])
-def api_list_notes(owner_id: int, db: Session = Depends(get_db)):
-    notes = list_notes_by_owner(db, owner_id)
-    return [
-        NoteSchema(
-            id=n.id,
-            title=n.title,
-            content=n.content,
-            owner_id=n.owner_id,
-            folder=n.folder,
-            tags=n.tags.split(",") if n.tags else [],
-            is_checklist=n.is_checklist,
-            checklist_items=[
-                ChecklistItemSchema.model_validate(item) for item in n.checklist_items
-            ],
-        )
-        for n in notes
-    ]
-
-
 @app.get("/notes/{note_id}", response_model=NoteSchema)
 def api_get_note(note_id: int, db: Session = Depends(get_db)):
     n = get_note(db, note_id)
@@ -126,19 +180,21 @@ def api_get_note(note_id: int, db: Session = Depends(get_db)):
         ],
     )
 
+# Only children can update their own notes
 @app.put("/notes/{note_id}", response_model=NoteSchema)
-def api_update_note(note_id: int, note: NoteSchema, db: Session = Depends(get_db)):
-    updated = update_note(
-        db,
-        note_id,
-        {
-            "title": note.title,
-            "content": note.content,
-            "folder": note.folder,
-            "tags": ",".join(note.tags) if isinstance(note.tags, list) else note.tags,
-            "is_checklist": note.is_checklist,
-        },
-    )
+def api_update_note(note_id: int, note: NoteSchema, db: Session = Depends(get_db), current_user = Depends(require_child)):
+    # Check if note belongs to the authenticated child
+    existing_note = get_note(db, note_id)
+    if not existing_note or existing_note.owner_id != current_user["user"].id:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    updated = update_note(db, note_id, {
+        "title": note.title,
+        "content": note.content,
+        "folder": note.folder,
+        "tags": ",".join(note.tags) if isinstance(note.tags, list) else note.tags,
+        "is_checklist": note.is_checklist,
+    })
     if not updated:
         raise HTTPException(status_code=404, detail="Note not found")
     return NoteSchema(
@@ -154,10 +210,14 @@ def api_update_note(note_id: int, note: NoteSchema, db: Session = Depends(get_db
         ],
     )
 
-
-
+# Only children can delete their own notes
 @app.delete("/notes/{note_id}", status_code=204)
-def api_delete_note(note_id: int, db: Session = Depends(get_db)):
+def api_delete_note(note_id: int, db: Session = Depends(get_db), current_user = Depends(require_child)):
+    # Check if note belongs to the authenticated child
+    existing_note = get_note(db, note_id)
+    if not existing_note or existing_note.owner_id != current_user["user"].id:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
     ok = delete_note(db, note_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Note not found")
@@ -288,5 +348,4 @@ def get_child_by_family_code_endpoint(family_code: str, db: Session = Depends(ge
         "email": child.email,
         "family_code": child.family_code,
     }
-
 

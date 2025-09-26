@@ -5,7 +5,7 @@ import { Grid, List, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Loader from '@/components/Loader';
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 export default function ChildDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -28,9 +28,20 @@ export default function ChildDashboard() {
   useEffect(() => {
     if (userId) {
       setLoading(true);
-      fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`)
+      fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`, {
+        headers: {
+          'X-User-ID': userId.toString(),
+          'X-User-Role': 'child'
+        }
+      })
         .then(res => res.json())
-        .then(setNotes)
+        .then(data => {
+          if (Array.isArray(data)) {
+            setNotes(data);
+          } else {
+            setNotes([]); // fallback if not an array
+          }
+        })
         .catch(() => setNotes([]))
         .finally(() => setLoading(false));
     } else {
@@ -41,7 +52,12 @@ export default function ChildDashboard() {
   const fetchNotes = async () => {
     try {
       console.log('Fetching notes...');
-      const response = await fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`);
+      const response = await fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`, {
+        headers: {
+          'X-User-ID': userId.toString(),
+          'X-User-Role': 'child'
+        }
+      });
       console.log('Response status:', response.status);
       
       if (response.ok) {
@@ -72,7 +88,11 @@ export default function ChildDashboard() {
         // Update existing note
         const response = await fetch(`${API_BASE_URL}/notes/${editingNote.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'X-User-ID': userId.toString(),
+            'X-User-Role': 'child',
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify(payload),
         });
 
@@ -89,7 +109,11 @@ export default function ChildDashboard() {
         // Create new note
         const response = await fetch(`${API_BASE_URL}/notes/`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'X-User-ID': userId.toString(),
+            'X-User-Role': 'child',
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify(payload),
         });
 
@@ -128,6 +152,10 @@ export default function ChildDashboard() {
     try {
       const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'DELETE',
+        headers: {
+          'X-User-ID': userId.toString(),
+          'X-User-Role': 'child'
+        }
       });
 
       if (response.ok) {
@@ -156,8 +184,11 @@ export default function ChildDashboard() {
   const role = user.role || 'child';
 
   // derive folders and tags from notes
+  // Defensive: fallback to empty array if notes is not an array
+  const safeNotes = Array.isArray(notes) ? notes : [];
+
   const folders = Array.from(
-    notes.reduce((m, n) => {
+    safeNotes.reduce((m, n) => {
       const key = n.folder || 'All Notes';
       m.set(key, (m.get(key) || 0) + 1);
       return m;
@@ -165,7 +196,7 @@ export default function ChildDashboard() {
   ).map(([name, count]) => ({ name, count }));
 
   const tags = Array.from(
-    notes.reduce((s, n) => {
+    safeNotes.reduce((s, n) => {
       (n.tags || []).forEach((t) => s.add(t));
       return s;
     }, new Set<string>())

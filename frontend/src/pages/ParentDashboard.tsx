@@ -5,8 +5,8 @@ import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import Loader from '@/components/Loader';
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
-
+// const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = "http://127.0.0.1:8000";
 export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
@@ -22,9 +22,21 @@ export default function ParentDashboard() {
 	const fetchNotes = () => {
 		if (childId) {
 			setLoading(true);
-			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`)
+			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`, {
+				headers: {
+					'X-User-ID': user.id.toString(),  // Add parent's user ID
+					'X-User-Role': 'parent',          // Add role
+					'Content-Type': 'application/json'
+				}
+			})
 				.then((res) => res.json())
-				.then((data) => setNotes(data))
+				.then((data) => {
+					if (Array.isArray(data)) {
+						setNotes(data);
+					} else {
+						setNotes([]);
+					}
+				})
 				.catch(() => setNotes([]))
 				.finally(() => setLoading(false));
 		}
@@ -75,6 +87,68 @@ export default function ParentDashboard() {
 			return s;
 		}, new Set<string>())
 	);
+
+	// Additional stats
+	const avgNotesPerDay = (thisWeekNotes / 7).toFixed(1);
+
+	const getWritingStreak = () => {
+	  let streak = 0;
+	  const today = new Date();
+	  for (let i = 0; i < 30; i++) {
+	    const checkDate = new Date(today);
+	    checkDate.setDate(today.getDate() - i);
+	    const hasNote = notes.some(note => {
+	      const noteDate = new Date(note.created_at);
+	      return noteDate.toDateString() === checkDate.toDateString();
+	    });
+	    if (hasNote) {
+	      streak++;
+	    } else {
+	      break;
+	    }
+	  }
+	  return streak;
+	};
+	const writingStreak = getWritingStreak();
+
+	const tagCounts = notes.reduce((acc, n) => {
+	  (n.tags || []).forEach(tag => {
+	    acc[tag] = (acc[tag] || 0) + 1;
+	  });
+	  return acc;
+	}, {});
+	const mostUsedTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+
+	const longestNote = Math.max(...notes.map(n => n.content.split(' ').length), 0);
+
+	const lastWeekNotes = notes.filter((n) => {
+	  const noteDate = new Date(n.created_at);
+	  const now = new Date();
+	  const twoWeeksAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
+	  const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+	  return noteDate >= twoWeeksAgo && noteDate < oneWeekAgo;
+	}).length;
+	const weeklyGrowth = lastWeekNotes > 0 ? Math.round(((thisWeekNotes - lastWeekNotes) / lastWeekNotes) * 100) : 0;
+
+	const dailyActivity = Array.from({ length: 7 }, (_, i) => {
+	  const checkDate = new Date();
+	  checkDate.setDate(checkDate.getDate() - (6 - i));
+	  return notes.filter(note => {
+	    const noteDate = new Date(note.created_at);
+	    return noteDate.toDateString() === checkDate.toDateString();
+	  }).length;
+	});
+
+	const getEncouragingMessage = () => {
+	  const messages = [
+	    `${childName} wrote ${thisWeekNotes} notes this week! Great creativity! 🎨`,
+	    `Keep up the wonderful writing habit! ${writingStreak} days in a row! ✨`,
+	    `${childName} is exploring ${categories.length} different subjects. Amazing curiosity! 🌟`,
+	    `Your child's longest note this week was ${longestNote} words. Impressive! 📝`,
+	    `${childName} is building great writing skills with consistent practice! 💪`
+	  ];
+	  return messages[Math.floor(Math.random() * messages.length)];
+	};
 
 	if (loading) return <Loader />;
 
