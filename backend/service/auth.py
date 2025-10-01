@@ -51,7 +51,7 @@ def verify_token(token: str, token_type: str = "access") -> dict:
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
+    except jwt.PyJWTError:  # <-- Fix here
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def generate_family_code() -> str:

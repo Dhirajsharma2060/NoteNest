@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# DATABASE_URL = os.getenv("DATABASE_URL")
-DATABASE_URL = os.getenv("DEV_DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
+# DATABASE_URL = os.getenv("DEV_DATABASE_URL")
 
 try:
     engine = create_engine(
