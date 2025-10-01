@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Grid, List, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Loader from '@/components/Loader';
+import { authenticatedFetch } from '@/lib/auth';
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+// const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ChildDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -26,53 +28,29 @@ export default function ChildDashboard() {
 
   // Fetch notes from backend
   useEffect(() => {
-    if (userId) {
-      setLoading(true);
-      fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`, {
-        headers: {
-          'X-User-ID': userId.toString(),
-          'X-User-Role': 'child'
+    const fetchNotes = async () => {
+      try {
+        setLoading(true);
+        const response = await authenticatedFetch(`${API_BASE_URL}/notes/?owner_id=${userId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setNotes(Array.isArray(data) ? data : []);
+        } else {
+          setNotes([]);
         }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setNotes(data);
-          } else {
-            setNotes([]); // fallback if not an array
-          }
-        })
-        .catch(() => setNotes([]))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+      } catch (error) {
+        console.error('Error fetching notes:', error);
+        setNotes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId) {
+      fetchNotes();
     }
   }, [userId]);
-
-  const fetchNotes = async () => {
-    try {
-      console.log('Fetching notes...');
-      const response = await fetch(`${API_BASE_URL}/notes/?owner_id=${userId}`, {
-        headers: {
-          'X-User-ID': userId.toString(),
-          'X-User-Role': 'child'
-        }
-      });
-      console.log('Response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Notes data:', data);
-        setNotes(data);
-      } else {
-        console.error('Failed to fetch notes');
-        setNotes([]);
-      }
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-      setNotes([]);
-    }
-  };
 
   // Create or update note
   const handleSubmitNote = async (e: React.FormEvent) => {
@@ -86,13 +64,9 @@ export default function ChildDashboard() {
     try {
       if (editingNote) {
         // Update existing note
-        const response = await fetch(`${API_BASE_URL}/notes/${editingNote.id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/notes/${editingNote.id}`, {
           method: 'PUT',
-          headers: {
-            'X-User-ID': userId.toString(),
-            'X-User-Role': 'child',
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
@@ -107,13 +81,9 @@ export default function ChildDashboard() {
         }
       } else {
         // Create new note
-        const response = await fetch(`${API_BASE_URL}/notes/`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/notes/`, {
           method: 'POST',
-          headers: {
-            'X-User-ID': userId.toString(),
-            'X-User-Role': 'child',
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
@@ -150,12 +120,8 @@ export default function ChildDashboard() {
     if (!window.confirm('Are you sure you want to delete this note?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'DELETE',
-        headers: {
-          'X-User-ID': userId.toString(),
-          'X-User-Role': 'child'
-        }
       });
 
       if (response.ok) {

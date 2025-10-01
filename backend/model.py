@@ -39,6 +39,7 @@ class Child(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     family_code = Column(String, unique=True, nullable=False)
+    refresh_token = Column(Text, unique=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     # Relationship to parents
     parents = relationship("Parent", back_populates="child")
@@ -53,6 +54,7 @@ class Parent(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    refresh_token = Column(Text , unique= True , nullable= True)
     created_at = Column(DateTime, default=datetime.utcnow)
     # Relationship to child
     child = relationship("Child", back_populates="parents")

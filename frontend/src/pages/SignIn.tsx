@@ -3,8 +3,9 @@ import { AuthLayout } from '@/components/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Users, Eye, EyeOff } from 'lucide-react';
+import { setTokens } from '@/lib/auth'; // Import setTokens function
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -41,10 +42,13 @@ export default function SignIn() {
         throw new Error(`This account is not a ${role}.`);
       }
 
-      // Store tokens under role-specific keys
+      // Store JWT tokens
+      setTokens(data.access_token, data.refresh_token);
+      
+      // Store user data under role-specific keys
       localStorage.setItem(`${role}_user`, JSON.stringify(data.user));
 
-      // Use React Router navigation
+      // Navigate to dashboard
       navigate(role === 'child' ? '/child' : '/parent');
     } catch (err: any) {
       setError(err.message);

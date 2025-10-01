@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import Loader from '@/components/Loader';
+import { authenticatedFetch } from '@/lib/auth';
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+// const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
@@ -18,34 +20,32 @@ export default function ParentDashboard() {
 	const childId = user.child_id;
 	const childName = user.child_name || 'Your Child';
 
-	const fetchNotes = () => {
-		if (childId) {
-			setLoading(true);
-			fetch(`${API_BASE_URL}/notes/?owner_id=${childId}`, {
-				headers: {
-					'X-User-ID': user.id.toString(),  // Add parent's user ID
-					'X-User-Role': 'parent',          // Add role
-					'Content-Type': 'application/json'
-				}
-			})
-				.then((res) => res.json())
-				.then((data) => {
-					if (Array.isArray(data)) {
-						setNotes(data);
-					} else {
-						setNotes([]);
-					}
-				})
-				.catch(() => setNotes([]))
-				.finally(() => setLoading(false));
-		}
-	};
-
 	useEffect(() => {
-		fetchNotes(); // Initial fetch
+		const fetchNotes = async () => {
+			try {
+				setLoading(true);
+				const response = await authenticatedFetch(`${API_BASE_URL}/notes/?owner_id=${childId}`);
+				
+				if (response.ok) {
+					const data = await response.json();
+					setNotes(Array.isArray(data) ? data : []);
+				} else {
+					setNotes([]);
+				}
+			} catch (error) {
+				console.error('Error fetching notes:', error);
+				setNotes([]);
+			} finally {
+				setLoading(false);
+			}
+		};
 
-		// Set up polling every 60 seconds
-		pollingRef.current = setInterval(fetchNotes, 60000);
+		if (childId) {
+			fetchNotes(); // Initial fetch
+
+			// Set up polling every 60 seconds
+			pollingRef.current = setInterval(fetchNotes, 60000);
+		}
 
 		// Cleanup on unmount
 		return () => {

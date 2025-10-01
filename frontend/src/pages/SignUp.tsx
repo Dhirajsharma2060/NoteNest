@@ -4,8 +4,9 @@ import { RoleSelector } from '@/components/RoleSelector';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { setTokens } from '@/lib/auth'; // Import setTokens function
 
-const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -42,15 +43,18 @@ export default function SignUp() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Signup failed');
 
-      // Store the complete user data
-      localStorage.setItem(`${role}_user`, JSON.stringify(data));
+      // Store JWT tokens
+      setTokens(data.access_token, data.refresh_token);
+      
+      // Store user data (not the entire response)
+      localStorage.setItem(`${role}_user`, JSON.stringify(data.user));
 
       // Show family code to child after signup
-      if (role === 'child' && data.family_code) {
-        alert(`Signup successful! Share this family code with your parent: ${data.family_code}`);
+      if (role === 'child' && data.user.family_code) {
+        alert(`Signup successful! 🎉\n\nYour family code is: ${data.user.family_code}\n\nShare this code with your parent so they can create their account and view your notes.`);
       }
 
-      // Use React Router navigation instead of window.location.href
+      // Navigate to dashboard
       navigate(role === 'child' ? '/child' : '/parent');
     } catch (err: any) {
       setError(err.message);
