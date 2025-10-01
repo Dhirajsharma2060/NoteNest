@@ -92,6 +92,12 @@ note-nest-family-notes/
 
 ## 🛡️ Authentication & Roles
 
+- **JWT Authentication:**  
+  - All protected API endpoints use JWT-based authentication for secure access.
+  - Access and refresh tokens are issued on login/signup and required for dashboard and note actions.
+  - Role-based access is enforced via JWT claims (child/parent).
+
+  
 - **Children:**  
   - Sign up and get a unique family code.
   - Can create, edit, and organize their own notes.
