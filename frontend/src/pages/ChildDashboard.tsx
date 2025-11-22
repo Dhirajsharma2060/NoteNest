@@ -2,12 +2,12 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { NoteCard } from '@/components/NoteCard';
 import { Button } from '@/components/ui/button';
 import { Grid, List, Filter } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Loader from '@/components/Loader';
 import { authenticatedFetch } from '@/lib/auth';
 
-// const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const PAGE_SIZE = 6; // Reduced for testing
 
 export default function ChildDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -22,42 +22,108 @@ export default function ChildDashboard() {
     is_checklist: false,
   });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const user = JSON.parse(localStorage.getItem('child_user') || '{}');
   const userId = user.id;
 
-  // Fetch notes from backend
-  useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        setLoading(true);
-        const response = await authenticatedFetch(`${API_BASE_URL}/notes/?owner_id=${userId}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          setNotes(Array.isArray(data) ? data : []);
-        } else {
-          setNotes([]);
-        }
-      } catch (error) {
-        console.error('Error fetching notes:', error);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch initial notes
+  const fetchInitialNotes = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      setLoading(true);
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/notes/?owner_id=${userId}&limit=${PAGE_SIZE}&offset=0`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setNotes(data);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(1); // Next page to load
+      } else {
         setNotes([]);
-      } finally {
-        setLoading(false);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching initial notes:', error);
+      setNotes([]);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  // Fetch more notes for pagination
+  const fetchMoreNotes = useCallback(async () => {
+    if (!userId || !hasMore || loadingMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const offset = page * PAGE_SIZE;
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/notes/?owner_id=${userId}&limit=${PAGE_SIZE}&offset=${offset}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.length > 0) {
+          setNotes(prev => [...prev, ...data]);
+          setPage(prev => prev + 1);
+          setHasMore(data.length === PAGE_SIZE);
+        } else {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching more notes:', error);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [userId, page, hasMore, loadingMore]);
+
+  // Initial load
+  useEffect(() => {
+    fetchInitialNotes();
+  }, [fetchInitialNotes]);
+
+  // Updated infinite scroll handler - listen to the actual scroll container
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      
+      // Check if we're near the bottom (within 200px)
+      if (
+        scrollTop + clientHeight >= scrollHeight - 200 &&
+        hasMore &&
+        !loadingMore &&
+        !loading
+      ) {
+        fetchMoreNotes();
       }
     };
 
-    if (userId) {
-      fetchNotes();
-    }
-  }, [userId]);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loadingMore, loading, fetchMoreNotes]);
 
   // Create or update note
   const handleSubmitNote = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       ...form,
-      owner_id: userId, // Use the actual child ID
+      owner_id: userId,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
     };
 
@@ -89,7 +155,7 @@ export default function ChildDashboard() {
 
         if (response.ok) {
           const newNote = await response.json();
-          setNotes([newNote, ...notes]);
+          setNotes([newNote, ...notes]); // Add to beginning
           setShowForm(false);
           resetForm();
         } else {
@@ -149,8 +215,7 @@ export default function ChildDashboard() {
   const userName = user.name || 'User';
   const role = user.role || 'child';
 
-  // derive folders and tags from notes
-  // Defensive: fallback to empty array if notes is not an array
+  // Derive folders and tags from notes
   const safeNotes = Array.isArray(notes) ? notes : [];
 
   const folders = Array.from(
@@ -177,6 +242,7 @@ export default function ChildDashboard() {
       folders={folders}
       tags={tags}
       onNewNote={() => setShowForm(true)}
+      scrollContainerRef={scrollContainerRef} // Pass ref to DashboardLayout
     >
       <div className="space-y-6">
         {/* Header */}
@@ -187,6 +253,7 @@ export default function ChildDashboard() {
             </h1>
             <p className="text-muted-foreground">
               You have {notes.length} notes in your nest
+              {hasMore && " (loading more as you scroll...)"}
             </p>
           </div>
           
@@ -294,12 +361,27 @@ export default function ChildDashboard() {
                 date={new Date(note.created_at).toLocaleDateString()}
                 color="yellow"
                 className="cursor-pointer hover:scale-105 transition-transform"
-                onEdit={() => handleEditNote(note)}        // pass handler
-                onDelete={() => handleDeleteNote(note.id)} // pass handler
+                onEdit={() => handleEditNote(note)}
+                onDelete={() => handleDeleteNote(note.id)}
               />
             </div>
           ))}
         </div>
+
+        {/* Loading More Indicator */}
+        {loadingMore && (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-2 text-muted-foreground">Loading more notes...</span>
+          </div>
+        )}
+
+        {/* End of Results */}
+        {!hasMore && notes.length > 0 && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">You've reached the end! 🎉</p>
+          </div>
+        )}
 
         {/* Empty State */}
         {notes.length === 0 && !showForm && (

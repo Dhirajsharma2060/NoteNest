@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
@@ -11,16 +11,20 @@ class Note(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     content = Column(Text, default="")
-    owner_id = Column(Integer, ForeignKey("children.id"), nullable=False)  # FK to Child
+    owner_id = Column(Integer, ForeignKey("children.id"), nullable=False, index=True)  # FK to Child
     folder = Column(String(128), nullable=True)
     tags = Column(String(1024), default="")  # comma-separated tags
     is_checklist = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     checklist_items = relationship("ChecklistItem", back_populates="note", cascade="all, delete-orphan")
 
-
+    # COMPOSITE INDEX for pagination query optimization
+    __table_args__ = (
+        # Most important: optimizes "WHERE owner_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        Index('ix_notes_owner_created_desc', 'owner_id', 'created_at'),
+    )
 class ChecklistItem(Base):
     __tablename__ = "checklist_items"
 

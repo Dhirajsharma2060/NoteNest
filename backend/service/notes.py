@@ -28,8 +28,8 @@ def create_note(
 def get_note(db: Session, note_id: int) -> Optional[Note]:
     return db.query(Note).filter(Note.id == note_id).first()
 
-def list_notes_by_owner(db: Session, owner_id: int) -> List[Note]:
-    return db.query(Note).filter(Note.owner_id == owner_id).order_by(Note.created_at.desc()).all()
+def list_notes_by_owner(db: Session, owner_id: int, limit: int = 20, offset: int = 0) -> List[Note]:
+    return db.query(Note).filter(Note.owner_id == owner_id).offset(offset).limit(limit).all()
 
 def update_note(db: Session, note_id: int, fields: Dict[str, Any]) -> Optional[Note]:
     note = db.query(Note).filter(Note.id == note_id).first()

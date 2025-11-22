@@ -5,6 +5,7 @@ import { Grid, List, Filter, TrendingUp, Calendar } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import Loader from '@/components/Loader';
 import { authenticatedFetch } from '@/lib/auth';
+import { toast } from '@/components/ui/sonner'; // or '@/components/ui/toast' if you use that
 
 // const API_BASE_URL = "https://notenest-backend-epgq.onrender.com";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -12,6 +13,10 @@ export default function ParentDashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [notes, setNotes] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [pollInterval, setPollInterval] = useState(60000); // Start with 60s
+	const [errorCount, setErrorCount] = useState(0);
+	const [showError, setShowError] = useState(false);
+	const [isPaused, setIsPaused] = useState(false);
 	const pollingRef = useRef<NodeJS.Timeout | null>(null);
 	
 	const user = JSON.parse(localStorage.getItem('parent_user') || '{}');
@@ -21,37 +26,72 @@ export default function ParentDashboard() {
 	const childName = user.child_name || 'Your Child';
 
 	useEffect(() => {
+		let timeoutId: NodeJS.Timeout | null = null;
+
 		const fetchNotes = async () => {
+			if (isPaused) return;
+
 			try {
 				setLoading(true);
 				const response = await authenticatedFetch(`${API_BASE_URL}/notes/?owner_id=${childId}`);
-				
 				if (response.ok) {
 					const data = await response.json();
 					setNotes(Array.isArray(data) ? data : []);
+					setErrorCount(0);
+					setShowError(false);
+					setPollInterval(60000);
 				} else {
 					setNotes([]);
+					setErrorCount((c) => c + 1);
+					setPollInterval((prev) => Math.min(prev * 2, 15 * 60000));
 				}
 			} catch (error) {
-				console.error('Error fetching notes:', error);
 				setNotes([]);
+				setErrorCount((c) => c + 1);
+				setPollInterval((prev) => Math.min(prev * 2, 15 * 60000));
 			} finally {
 				setLoading(false);
+
+				// Pause polling after 10 errors
+				if (errorCount + 1 >= 10) {
+					setIsPaused(true);
+					toast({
+						title: "Temporary Connection Issue",
+						description: "We're having trouble updating your dashboard. We'll try again soon.",
+						variant: "destructive",
+					});
+					timeoutId = setTimeout(() => {
+						setIsPaused(false);
+						setErrorCount(0);
+						setPollInterval(15 * 60000); // Resume with max interval
+						fetchNotes();
+					}, 30 * 60000); // Pause for 30 minutes
+				} else {
+					timeoutId = setTimeout(fetchNotes, pollInterval);
+				}
 			}
 		};
 
-		if (childId) {
-			fetchNotes(); // Initial fetch
-
-			// Set up polling every 60 seconds
-			pollingRef.current = setInterval(fetchNotes, 60000);
+		if (childId && !isPaused) {
+			fetchNotes();
 		}
 
-		// Cleanup on unmount
 		return () => {
-			if (pollingRef.current) clearInterval(pollingRef.current);
+			if (timeoutId) clearTimeout(timeoutId);
 		};
-	}, [childId]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [childId, pollInterval, isPaused, errorCount]);
+
+	useEffect(() => {
+		if (errorCount >= 3 && !showError) {
+			toast({
+				title: "Connection Issue",
+				description: "Unable to fetch notes. Please check your internet connection or try again later.",
+				variant: "destructive",
+			});
+			setShowError(true);
+		}
+	}, [errorCount, showError]);
 
 	// Dynamic stats
 	const totalNotes = notes.length;

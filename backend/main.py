@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from .db import SessionLocal, engine
-from .model import Base, Note
+from .model import Base, Note,Child,Parent
 from .service.notes import (
     create_note, get_note, list_notes_by_owner, update_note, delete_note,
     add_checklist_item, list_checklist_items, update_checklist_item, delete_checklist_item,
@@ -44,8 +44,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     if not user_id or not role:
         raise HTTPException(status_code=401, detail="Invalid token payload")
     
-    # Get user from database
-    from .model import Child, Parent
+    
     if role == "child":
         user = db.query(Child).filter(Child.id == user_id).first()
     elif role == "parent":
@@ -133,7 +132,11 @@ def api_create_note(note: NoteSchema, db: Session = Depends(get_db), current_use
     )
 
 @app.get("/notes/", response_model=List[NoteSchema])
-def api_list_notes(owner_id: int, db: Session = Depends(get_db), current_user = Depends(require_child_or_parent)):
+def api_list_notes(owner_id: int,
+                   limit: int = 20,
+                   offset: int = 0, 
+                   db: Session = Depends(get_db), 
+                   current_user = Depends(require_child_or_parent)):
     if current_user["role"] == "child":
         if owner_id != current_user["user"].id:
             raise HTTPException(status_code=403, detail="Can only view your own notes")
@@ -141,7 +144,7 @@ def api_list_notes(owner_id: int, db: Session = Depends(get_db), current_user = 
         if owner_id != current_user["user"].child_id:
             raise HTTPException(status_code=403, detail="Can only view your child's notes")
     
-    notes = list_notes_by_owner(db, owner_id)
+    notes = list_notes_by_owner(db, owner_id, limit=limit, offset=offset)
     return [
         NoteSchema(
             id=n.id, title=n.title, content=n.content, owner_id=n.owner_id,

@@ -214,3 +214,12 @@
     60% { transform: translateY(-3px); }
   }
 }
+* {
+  scroll-behavior: smooth;
+}
+
+/* Optimize rendering for scrolling elements */
+.scroll-container {
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+}
