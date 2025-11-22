@@ -35,6 +35,7 @@ def add_cors(app):
             "http://127.0.0.1:8080",
             "https://notenest-b1zz.onrender.com",
             "https://notenest-backend-epgq.onrender.com",
+            "https://notenest-frontend-v1.onrender.com",
         ],
         allow_credentials=True,
         allow_methods=["*"],
